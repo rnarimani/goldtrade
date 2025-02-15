@@ -10,7 +10,7 @@ import requests
 from tabulate import tabulate
 import colorama
 from colorama import Fore, Style
-from requests_html import HTMLSession
+from bs4 import BeautifulSoup
 
 colorama.init()
 
@@ -44,26 +44,29 @@ def get_crypto_gold_prices():
 
 def get_prices():
     try:
-        session = HTMLSession()
-        response = session.get("https://bon-bast.com")
-        response.html.render(timeout=20)  # Renders JavaScript
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
         
-        def get_element_text(selector):
+        response = requests.get("https://bon-bast.com", headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        def get_element_text(element_id):
             try:
-                element = response.html.find(selector, first=True)
+                element = soup.find(id=element_id)
                 return element.text.strip() if element else '0'
             except Exception as e:
-                print(f"Error getting {selector}: {str(e)}")
+                print(f"Error getting {element_id}: {str(e)}")
                 return '0'
         
-        # Get prices using CSS selectors
+        # Get prices using element IDs
         local_prices = {
-            'gold_per_gram': int(''.join(filter(str.isdigit, get_element_text("#gol18")))),
-            'full_coin': int(''.join(filter(str.isdigit, get_element_text("#emami1")))),
-            'half_coin': int(''.join(filter(str.isdigit, get_element_text("#azadi1_2")))),
-            'quarter_coin': int(''.join(filter(str.isdigit, get_element_text("#azadi1_4")))),
-            'usd': int(''.join(filter(str.isdigit, get_element_text("#usd1")))),
-            'global_gold': float(get_element_text("#ounce_top").replace(',', ''))
+            'gold_per_gram': int(''.join(filter(str.isdigit, get_element_text("gol18")))),
+            'full_coin': int(''.join(filter(str.isdigit, get_element_text("emami1")))),
+            'half_coin': int(''.join(filter(str.isdigit, get_element_text("azadi1_2")))),
+            'quarter_coin': int(''.join(filter(str.isdigit, get_element_text("azadi1_4")))),
+            'usd': int(''.join(filter(str.isdigit, get_element_text("usd1")))),
+            'global_gold': float(get_element_text("ounce_top").replace(',', ''))
         }
         
         # Coin weights in grams
@@ -187,9 +190,6 @@ def get_prices():
     except Exception as e:
         print(f"Error: {str(e)}")
         return None
-    finally:
-        if 'session' in locals():
-            session.close()
 
 if __name__ == "__main__":
     prices = get_prices()
