@@ -10,6 +10,7 @@ import requests
 from tabulate import tabulate
 import colorama
 from colorama import Fore, Style
+from requests_html import HTMLSession
 
 colorama.init()
 
@@ -42,111 +43,37 @@ def get_crypto_gold_prices():
         return {'paxg': 0, 'xaut': 0}
 
 def get_prices():
-    # Coin weights in grams
-    FULL_COIN_WEIGHT = 8.133
-    HALF_COIN_WEIGHT = 4.068
-    QUARTER_COIN_WEIGHT = 2.034
-    
-    # Constants for gold price calculation
-    GOLD_PURITY_18K = 0.750  # 18K gold is 75% pure
-    GRAM_TO_OUNCE = 31.1035  # 1 ounce = 31.1035 grams
-    
     try:
-        # Setup Chrome options
-        options = Options()
-        options.add_argument('--headless=new')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
+        session = HTMLSession()
+        response = session.get("https://bon-bast.com")
+        response.html.render(timeout=20)  # Renders JavaScript
         
-        # Initialize the driver
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-        
-        # First get local prices from bon-bast
-        driver.get("https://bon-bast.com")
-        wait = WebDriverWait(driver, 20)
-        wait.until(lambda d: d.execute_script('return document.readyState') == 'complete')
-        
-        # Wait for dynamic content to load
-        time.sleep(5)
-        
-        # Scroll down to make sure all content is loaded
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(2)
-        
-        def get_coin_price(coin_id):
+        def get_element_text(selector):
             try:
-                # Wait for the element to be present
-                wait.until(EC.presence_of_element_located((By.ID, coin_id)))
-                
-                # Get the price element
-                price_element = driver.find_element(By.ID, coin_id)
-                price_text = price_element.text.strip()
-                
-                # Convert price text to integer (remove commas)
-                price = int(''.join(filter(str.isdigit, price_text)))
-                return price
+                element = response.html.find(selector, first=True)
+                return element.text.strip() if element else '0'
             except Exception as e:
-                print(f"Error getting price for {coin_id}: {str(e)}")
-                return 0
+                print(f"Error getting {selector}: {str(e)}")
+                return '0'
         
-        def get_usd_price():
-            try:
-                # Wait for the USD price element to be present
-                wait.until(EC.presence_of_element_located((By.ID, "usd1")))
-                
-                # Get the USD sell price
-                price_element = driver.find_element(By.ID, "usd1")
-                price_text = price_element.text.strip()
-                
-                # Convert price text to integer (remove commas)
-                price = int(''.join(filter(str.isdigit, price_text)))
-                return price
-            except Exception as e:
-                print(f"Error getting USD price: {str(e)}")
-                return 0
-        
-        def get_global_gold_price():
-            try:
-                # Wait for the gold price panel to be present
-                wait.until(EC.presence_of_element_located((By.ID, "ounce_top")))
-                
-                # Get the gold price
-                price_element = driver.find_element(By.ID, "ounce_top")
-                price_text = price_element.text.strip()
-                
-                # Convert price text to float (remove commas)
-                price = float(price_text.replace(',', ''))
-                return price
-            except Exception as e:
-                print(f"Error getting global gold price: {str(e)}")
-                return 0
-        
-        def get_gold_price():
-            try:
-                # Wait for the gold price element to be present
-                wait.until(EC.presence_of_element_located((By.ID, "gol18")))
-                
-                # Get the gold price
-                price_element = driver.find_element(By.ID, "gol18")
-                price_text = price_element.text.strip()
-                
-                # Convert price text to integer (remove commas)
-                price = int(''.join(filter(str.isdigit, price_text)))
-                return price
-            except Exception as e:
-                print(f"Error getting gold price: {str(e)}")
-                return 0
-        
-        # Get local prices from table
+        # Get prices using CSS selectors
         local_prices = {
-            'gold_per_gram': get_gold_price(),            # 18k gold per gram
-            'full_coin': get_coin_price("emami1"),        # Emami coin
-            'half_coin': get_coin_price("azadi1_2"),      # Half Azadi
-            'quarter_coin': get_coin_price("azadi1_4"),   # Quarter Azadi
-            'usd': get_usd_price(),
-            'global_gold': get_global_gold_price()
+            'gold_per_gram': int(''.join(filter(str.isdigit, get_element_text("#gol18")))),
+            'full_coin': int(''.join(filter(str.isdigit, get_element_text("#emami1")))),
+            'half_coin': int(''.join(filter(str.isdigit, get_element_text("#azadi1_2")))),
+            'quarter_coin': int(''.join(filter(str.isdigit, get_element_text("#azadi1_4")))),
+            'usd': int(''.join(filter(str.isdigit, get_element_text("#usd1")))),
+            'global_gold': float(get_element_text("#ounce_top").replace(',', ''))
         }
+        
+        # Coin weights in grams
+        FULL_COIN_WEIGHT = 8.133
+        HALF_COIN_WEIGHT = 4.068
+        QUARTER_COIN_WEIGHT = 2.034
+        
+        # Constants for gold price calculation
+        GOLD_PURITY_18K = 0.750  # 18K gold is 75% pure
+        GRAM_TO_OUNCE = 31.1035  # 1 ounce = 31.1035 grams
         
         # Calculate theoretical gold price
         theoretical_gold_gram = (local_prices['global_gold'] * local_prices['usd']) / GRAM_TO_OUNCE * GOLD_PURITY_18K
@@ -261,8 +188,8 @@ def get_prices():
         print(f"Error: {str(e)}")
         return None
     finally:
-        if 'driver' in locals():
-            driver.quit()
+        if 'session' in locals():
+            session.close()
 
 if __name__ == "__main__":
     prices = get_prices()
