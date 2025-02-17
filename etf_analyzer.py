@@ -76,13 +76,9 @@ class GoldETFAnalyzer:
         try:
             print("Getting ETF list from tradersarena...")
             
-            # تعریف headers
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            # استفاده از تنظیمات مشترک Chrome
+            # استفاده از تنظیمات مشترک Chrome و headers
             driver = chrome_config.get_chrome_driver()
+            headers = chrome_config.get_headers()
             
             try:
                 driver.get('https://tradersarena.ir/industries/68f')

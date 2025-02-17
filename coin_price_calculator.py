@@ -45,16 +45,12 @@ def get_crypto_gold_prices():
 def get_prices():
     """دریافت قیمت‌های طلا از coingecko"""
     try:
-        # تعریف headers
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        # استفاده از تنظیمات مشترک Chrome
+        # استفاده از تنظیمات مشترک Chrome و headers
         driver = chrome_config.get_chrome_driver()
+        headers = chrome_config.get_headers()
         
         try:
-            driver.set_page_load_timeout(180)
+            driver.set_page_load_timeout(300)
             response = requests.get("https://bon-bast.com", headers=headers)
             soup = BeautifulSoup(response.text, 'html.parser')
             
