@@ -95,8 +95,8 @@ class GoldETFAnalyzer:
             chrome_options.add_argument('--window-size=1920,1080')
             chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             
-            # استفاده از ChromeDriverManager با تنظیمات بیشتر
-            service = Service(ChromeDriverManager(version="stable").install())
+            # استفاده از ChromeDriverManager بدون تعیین نسخه
+            service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
             
             try:
