@@ -211,8 +211,11 @@ class GoldETFAnalyzer:
             chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             chrome_options.binary_location = "/usr/bin/chromium"
             
-            # استفاده از ChromeDriverManager بدون تعیین نسخه
-            service = Service(ChromeDriverManager().install())
+            # استفاده از ChromeDriverManager با تنظیمات خاص
+            driver_path = ChromeDriverManager().install()
+            service = Service(driver_path)
+            service.start()  # شروع سرویس به صورت جداگانه
+            
             driver = webdriver.Chrome(service=service, options=chrome_options)
             
             try:
