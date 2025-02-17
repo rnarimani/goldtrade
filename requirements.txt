@@ -1,6 +1,6 @@
 streamlit
 selenium
-webdriver_manager
+webdriver-manager>=3.8.0
 pandas
 requests
 beautifulsoup4
