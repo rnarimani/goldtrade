@@ -3,6 +3,9 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import coin_price_calculator as cpc
 import streamlit as st
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 import os
 import chrome_config
