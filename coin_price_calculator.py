@@ -10,7 +10,7 @@ import colorama
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
 import os
-from . import chrome_config
+import chrome_config
 
 colorama.init()
 

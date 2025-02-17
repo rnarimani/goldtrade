@@ -5,7 +5,7 @@ import coin_price_calculator as cpc
 import streamlit as st
 import time
 import os
-from . import chrome_config
+import chrome_config
 
 
 class GoldETFAnalyzer:
