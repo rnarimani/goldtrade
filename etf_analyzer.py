@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+import os
 
 class GoldETFAnalyzer:
     def __init__(self):
@@ -76,29 +77,39 @@ class GoldETFAnalyzer:
     def get_all_gold_etfs(self):
         """دریافت لیست همه صندوق‌های طلا از tradersarena با استفاده از selenium"""
         try:
-            print("Getting ETF list from tradersarena...")  # Debug
+            print("Getting ETF list from tradersarena...")
             
-            # تنظیمات Chrome
+            # تنظیمات Chrome برای استریم‌لیت
             chrome_options = Options()
             chrome_options.add_argument('--headless')
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--disable-software-rasterizer')
+            chrome_options.add_argument('--disable-extensions')
+            chrome_options.add_argument('--single-process')
+            chrome_options.add_argument('--ignore-certificate-errors')
+            chrome_options.add_argument('--window-size=1920,1080')
+            
+            # اگر روی استریم‌لیت هستیم
+            if 'STREAMLIT_SHARING' in os.environ:
+                chrome_options.binary_location = "/usr/bin/chromium-browser"
             
             driver = webdriver.Chrome(options=chrome_options)
             driver.get('https://tradersarena.ir/industries/68f')
             
-            # صبر برای لود شدن جدول
-            wait = WebDriverWait(driver, 10)
+            # افزایش زمان انتظار
+            wait = WebDriverWait(driver, 30)
             table = wait.until(EC.presence_of_element_located((By.ID, 'navTable')))
             
             # صبر اضافه برای لود شدن داده‌ها
-            time.sleep(2)
+            time.sleep(5)
             
             # پیدا کردن ردیف‌های جدول
             rows = table.find_elements(By.TAG_NAME, 'tr')
-            print(f"Found {len(rows)} rows")  # Debug
+            print(f"Found {len(rows)} rows")
             
-            for row in rows[1:]:  # پرش از ردیف header
+            for row in rows[1:]:
                 try:
                     cols = row.find_elements(By.TAG_NAME, 'td')
                     if len(cols) >= 6:
@@ -108,22 +119,24 @@ class GoldETFAnalyzer:
                         if symbol and symbol not in ['حداقل', 'حداکثر']:
                             self.gold_etfs[symbol] = {
                                 'name': symbol_element.get_attribute('href').split('/')[-1],
-                                'gold_weight': 0.01,  # هر واحد معادل 0.01 گرم طلای 24 عیار
-                                'gold_purity': 1.000  # طلای 24 عیار
+                                'gold_weight': 0.01,
+                                'gold_purity': 1.000
                             }
-                            print(f"Added ETF: {symbol}")  # Debug
+                            print(f"Added ETF: {symbol}")
                             
                 except Exception as e:
-                    print(f"Error parsing row: {str(e)}")  # Debug
+                    print(f"Error parsing row: {str(e)}")
                     continue
             
             driver.quit()
-            print(f"Total gold ETFs found: {len(self.gold_etfs)}")  # Debug
+            print(f"Total gold ETFs found: {len(self.gold_etfs)}")
             
         except Exception as e:
             print(f"Error getting ETF list: {str(e)}")
             if 'driver' in locals():
                 driver.quit()
+            # اگر خطا رخ داد، از لیست پیش‌فرض استفاده کنیم
+            self.gold_etfs = self.gold_etf_info
     
     def convert_volume(self, volume_text):
         """تبدیل متن حجم معاملات به عدد"""
