@@ -4,8 +4,6 @@ import pandas as pd
 import coin_price_calculator as cpc
 import streamlit as st
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -95,9 +93,8 @@ class GoldETFAnalyzer:
             chrome_options.add_argument('--window-size=1920,1080')
             chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             
-            # استفاده از ChromeDriverManager بدون تعیین نسخه
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
+            # استفاده از selenium-manager
+            driver = webdriver.Chrome(options=chrome_options)
             
             try:
                 driver.set_page_load_timeout(180)  # افزایش timeout به 3 دقیقه
@@ -211,12 +208,8 @@ class GoldETFAnalyzer:
             chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             chrome_options.binary_location = "/usr/bin/chromium"
             
-            # استفاده از ChromeDriverManager با تنظیمات خاص
-            driver_path = ChromeDriverManager().install()
-            service = Service(driver_path)
-            service.start()  # شروع سرویس به صورت جداگانه
-            
-            driver = webdriver.Chrome(service=service, options=chrome_options)
+            # استفاده از selenium-manager
+            driver = webdriver.Chrome(options=chrome_options)
             
             try:
                 driver.set_page_load_timeout(180)

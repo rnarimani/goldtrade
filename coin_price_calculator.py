@@ -1,10 +1,8 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 import time
 import requests
 from tabulate import tabulate
@@ -60,12 +58,8 @@ def get_prices():
         chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
         chrome_options.binary_location = "/usr/bin/chromium"
         
-        # استفاده از ChromeDriverManager با تنظیمات خاص
-        driver_path = ChromeDriverManager().install()
-        service = Service(driver_path)
-        service.start()  # شروع سرویس به صورت جداگانه
-        
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        # استفاده از selenium-manager
+        driver = webdriver.Chrome(options=chrome_options)
         
         try:
             driver.set_page_load_timeout(180)
