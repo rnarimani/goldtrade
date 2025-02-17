@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import os
 
+
 class GoldETFAnalyzer:
     def __init__(self):
         # اطلاعات پایه صندوق‌های طلا
