@@ -12,6 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import os
+from webdriver_manager.core.utils import ChromeType
 
 
 class GoldETFAnalyzer:
@@ -210,8 +211,8 @@ class GoldETFAnalyzer:
             chrome_options.add_argument('--window-size=1920,1080')
             chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             
-            # استفاده از ChromeDriverManager بدون تعیین نسخه
-            service = Service(ChromeDriverManager().install())
+            # استفاده از ChromeDriverManager برای Chromium
+            service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
             
             try:
