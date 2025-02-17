@@ -11,6 +11,7 @@ from tabulate import tabulate
 import colorama
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
+import os
 
 colorama.init()
 
@@ -43,150 +44,170 @@ def get_crypto_gold_prices():
         return {'paxg': 0, 'xaut': 0}
 
 def get_prices():
+    """دریافت قیمت‌های طلا از coingecko"""
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+        # تنظیمات Chrome
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-software-rasterizer')
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--single-process')
+        chrome_options.add_argument('--ignore-certificate-errors')
+        chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
+        chrome_options.binary_location = "/usr/bin/chromium"
         
-        response = requests.get("https://bon-bast.com", headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # استفاده از ChromeDriverManager با نسخه مشخص
+        service = Service(ChromeDriverManager(version="120.0.6099.109").install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
         
-        def get_element_text(element_id):
-            try:
-                element = soup.find(id=element_id)
-                return element.text.strip() if element else '0'
-            except Exception as e:
-                print(f"Error getting {element_id}: {str(e)}")
-                return '0'
-        
-        # Get prices using element IDs
-        local_prices = {
-            'gold_per_gram': int(''.join(filter(str.isdigit, get_element_text("gol18")))),
-            'full_coin': int(''.join(filter(str.isdigit, get_element_text("emami1")))),
-            'half_coin': int(''.join(filter(str.isdigit, get_element_text("azadi1_2")))),
-            'quarter_coin': int(''.join(filter(str.isdigit, get_element_text("azadi1_4")))),
-            'usd': int(''.join(filter(str.isdigit, get_element_text("usd1")))),
-            'global_gold': float(get_element_text("ounce_top").replace(',', ''))
-        }
-        
-        # Coin weights in grams
-        FULL_COIN_WEIGHT = 8.133
-        HALF_COIN_WEIGHT = 4.068
-        QUARTER_COIN_WEIGHT = 2.034
-        
-        # Constants for gold price calculation
-        GOLD_PURITY_18K = 0.750  # 18K gold is 75% pure
-        GRAM_TO_OUNCE = 31.1035  # 1 ounce = 31.1035 grams
-        
-        # Calculate theoretical gold price
-        theoretical_gold_gram = (local_prices['global_gold'] * local_prices['usd']) / GRAM_TO_OUNCE * GOLD_PURITY_18K
-        gold_price_difference = ((local_prices['gold_per_gram'] - theoretical_gold_gram) / theoretical_gold_gram) * 100
-        
-        # Calculate coin bubbles
-        full_coin_gold_value = local_prices['gold_per_gram'] * FULL_COIN_WEIGHT
-        half_coin_gold_value = local_prices['gold_per_gram'] * HALF_COIN_WEIGHT
-        quarter_coin_gold_value = local_prices['gold_per_gram'] * QUARTER_COIN_WEIGHT
-        
-        bubbles = {
-            'full_coin': ((local_prices['full_coin'] - full_coin_gold_value) / full_coin_gold_value) * 100,
-            'half_coin': ((local_prices['half_coin'] - half_coin_gold_value) / half_coin_gold_value) * 100,
-            'quarter_coin': ((local_prices['quarter_coin'] - quarter_coin_gold_value) / quarter_coin_gold_value) * 100
-        }
-        
-        # Return results instead of printing
-        result = {
-            'global_gold': local_prices['global_gold'],
-            'usd': local_prices['usd'],
-            'gold_per_gram': local_prices['gold_per_gram'],
-            'full_coin': local_prices['full_coin'],
-            'half_coin': local_prices['half_coin'],
-            'quarter_coin': local_prices['quarter_coin'],
-            'bubbles': bubbles,
-            'gold_price_difference': gold_price_difference
-        }
-        
-        # Get crypto gold prices
-        crypto_prices = get_crypto_gold_prices()
-        result['paxg'] = crypto_prices['paxg']
-        result['xaut'] = crypto_prices['xaut']
-
-        # Add investment options to result
-        investment_options = [
-            {
-                'name': '18k Gold',
-                'premium': gold_price_difference,
-                'liquidity': 'High',
-                'storage': 'Easy'
-            },
-            {
-                'name': 'Full Coin',
-                'premium': bubbles['full_coin'],
-                'liquidity': 'Very High',
-                'storage': 'Easy'
-            },
-            {
-                'name': 'Half Coin',
-                'premium': bubbles['half_coin'],
-                'liquidity': 'High',
-                'storage': 'Easy'
-            },
-            {
-                'name': 'Quarter Coin',
-                'premium': bubbles['quarter_coin'],
-                'liquidity': 'Medium',
-                'storage': 'Easy'
-            },
-            {
-                'name': 'PAXG',
-                'premium': ((crypto_prices['paxg'] - local_prices['global_gold']) / local_prices['global_gold']) * 100,
-                'liquidity': 'Medium',
-                'storage': 'Digital'
-            },
-            {
-                'name': 'XAUT',
-                'premium': ((crypto_prices['xaut'] - local_prices['global_gold']) / local_prices['global_gold']) * 100,
-                'liquidity': 'Medium',
-                'storage': 'Digital'
+        try:
+            driver.set_page_load_timeout(180)
+            response = requests.get("https://bon-bast.com", headers=headers)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            def get_element_text(element_id):
+                try:
+                    element = soup.find(id=element_id)
+                    return element.text.strip() if element else '0'
+                except Exception as e:
+                    print(f"Error getting {element_id}: {str(e)}")
+                    return '0'
+            
+            # Get prices using element IDs
+            local_prices = {
+                'gold_per_gram': int(''.join(filter(str.isdigit, get_element_text("gol18")))),
+                'full_coin': int(''.join(filter(str.isdigit, get_element_text("emami1")))),
+                'half_coin': int(''.join(filter(str.isdigit, get_element_text("azadi1_2")))),
+                'quarter_coin': int(''.join(filter(str.isdigit, get_element_text("azadi1_4")))),
+                'usd': int(''.join(filter(str.isdigit, get_element_text("usd1")))),
+                'global_gold': float(get_element_text("ounce_top").replace(',', ''))
             }
-        ]
-        
-        def get_best_investment():
-            # Sort options by absolute premium value
-            sorted_opts = sorted(investment_options, key=lambda x: abs(x['premium']))
-            best_option = sorted_opts[0]
             
-            # Generate timing advice
-            if gold_price_difference < -5:
-                timing = "Good time to buy! Gold price is below global price."
-            else:
-                timing = "Not an ideal time to buy. Consider waiting."
+            # Coin weights in grams
+            FULL_COIN_WEIGHT = 8.133
+            HALF_COIN_WEIGHT = 4.068
+            QUARTER_COIN_WEIGHT = 2.034
             
-            # Generate detailed recommendation
-            if abs(best_option['premium']) < 5:
-                if best_option['name'] in ['PAXG', 'XAUT']:
-                    recommendation = f"{best_option['name']} is the best option with minimal premium ({best_option['premium']:.1f}%). Digital gold offers global liquidity but requires crypto knowledge."
-                elif best_option['name'] == '18k Gold':
-                    recommendation = f"18k Gold is the best option with low premium ({best_option['premium']:.1f}%). Most liquid and divisible."
-                else:
-                    recommendation = f"{best_option['name']} has the lowest bubble ({best_option['premium']:.1f}%) among physical options."
-            else:
-                crypto_premiums = [opt['premium'] for opt in investment_options if opt['name'] in ['PAXG', 'XAUT']]
-                if crypto_premiums and min(abs(p) for p in crypto_premiums) < 10:
-                    recommendation = "Digital gold (PAXG/XAUT) might be safer due to lower premium, but requires crypto knowledge."
-                elif gold_price_difference < min(bubbles.values()):
-                    recommendation = "18k Gold is safest due to lower premium than coins."
-                else:
-                    recommendation = "All options have high premiums. Consider waiting for better prices."
+            # Constants for gold price calculation
+            GOLD_PURITY_18K = 0.750  # 18K gold is 75% pure
+            GRAM_TO_OUNCE = 31.1035  # 1 ounce = 31.1035 grams
             
-            return timing, recommendation
+            # Calculate theoretical gold price
+            theoretical_gold_gram = (local_prices['global_gold'] * local_prices['usd']) / GRAM_TO_OUNCE * GOLD_PURITY_18K
+            gold_price_difference = ((local_prices['gold_per_gram'] - theoretical_gold_gram) / theoretical_gold_gram) * 100
+            
+            # Calculate coin bubbles
+            full_coin_gold_value = local_prices['gold_per_gram'] * FULL_COIN_WEIGHT
+            half_coin_gold_value = local_prices['gold_per_gram'] * HALF_COIN_WEIGHT
+            quarter_coin_gold_value = local_prices['gold_per_gram'] * QUARTER_COIN_WEIGHT
+            
+            bubbles = {
+                'full_coin': ((local_prices['full_coin'] - full_coin_gold_value) / full_coin_gold_value) * 100,
+                'half_coin': ((local_prices['half_coin'] - half_coin_gold_value) / half_coin_gold_value) * 100,
+                'quarter_coin': ((local_prices['quarter_coin'] - quarter_coin_gold_value) / quarter_coin_gold_value) * 100
+            }
+            
+            # Return results instead of printing
+            result = {
+                'global_gold': local_prices['global_gold'],
+                'usd': local_prices['usd'],
+                'gold_per_gram': local_prices['gold_per_gram'],
+                'full_coin': local_prices['full_coin'],
+                'half_coin': local_prices['half_coin'],
+                'quarter_coin': local_prices['quarter_coin'],
+                'bubbles': bubbles,
+                'gold_price_difference': gold_price_difference
+            }
+            
+            # Get crypto gold prices
+            crypto_prices = get_crypto_gold_prices()
+            result['paxg'] = crypto_prices['paxg']
+            result['xaut'] = crypto_prices['xaut']
 
-        result['investment_options'] = investment_options
-        timing_advice, investment_recommendation = get_best_investment()
-        result['advice'] = timing_advice
-        result['best_investment'] = investment_recommendation
-
-        return result
+            # Add investment options to result
+            investment_options = [
+                {
+                    'name': '18k Gold',
+                    'premium': gold_price_difference,
+                    'liquidity': 'High',
+                    'storage': 'Easy'
+                },
+                {
+                    'name': 'Full Coin',
+                    'premium': bubbles['full_coin'],
+                    'liquidity': 'Very High',
+                    'storage': 'Easy'
+                },
+                {
+                    'name': 'Half Coin',
+                    'premium': bubbles['half_coin'],
+                    'liquidity': 'High',
+                    'storage': 'Easy'
+                },
+                {
+                    'name': 'Quarter Coin',
+                    'premium': bubbles['quarter_coin'],
+                    'liquidity': 'Medium',
+                    'storage': 'Easy'
+                },
+                {
+                    'name': 'PAXG',
+                    'premium': ((crypto_prices['paxg'] - local_prices['global_gold']) / local_prices['global_gold']) * 100,
+                    'liquidity': 'Medium',
+                    'storage': 'Digital'
+                },
+                {
+                    'name': 'XAUT',
+                    'premium': ((crypto_prices['xaut'] - local_prices['global_gold']) / local_prices['global_gold']) * 100,
+                    'liquidity': 'Medium',
+                    'storage': 'Digital'
+                }
+            ]
             
+            def get_best_investment():
+                # Sort options by absolute premium value
+                sorted_opts = sorted(investment_options, key=lambda x: abs(x['premium']))
+                best_option = sorted_opts[0]
+                
+                # Generate timing advice
+                if gold_price_difference < -5:
+                    timing = "Good time to buy! Gold price is below global price."
+                else:
+                    timing = "Not an ideal time to buy. Consider waiting."
+                
+                # Generate detailed recommendation
+                if abs(best_option['premium']) < 5:
+                    if best_option['name'] in ['PAXG', 'XAUT']:
+                        recommendation = f"{best_option['name']} is the best option with minimal premium ({best_option['premium']:.1f}%). Digital gold offers global liquidity but requires crypto knowledge."
+                    elif best_option['name'] == '18k Gold':
+                        recommendation = f"18k Gold is the best option with low premium ({best_option['premium']:.1f}%). Most liquid and divisible."
+                    else:
+                        recommendation = f"{best_option['name']} has the lowest bubble ({best_option['premium']:.1f}%) among physical options."
+                else:
+                    crypto_premiums = [opt['premium'] for opt in investment_options if opt['name'] in ['PAXG', 'XAUT']]
+                    if crypto_premiums and min(abs(p) for p in crypto_premiums) < 10:
+                        recommendation = "Digital gold (PAXG/XAUT) might be safer due to lower premium, but requires crypto knowledge."
+                    elif gold_price_difference < min(bubbles.values()):
+                        recommendation = "18k Gold is safest due to lower premium than coins."
+                    else:
+                        recommendation = "All options have high premiums. Consider waiting for better prices."
+                
+                return timing, recommendation
+
+            result['investment_options'] = investment_options
+            timing_advice, investment_recommendation = get_best_investment()
+            result['advice'] = timing_advice
+            result['best_investment'] = investment_recommendation
+
+            return result
+            
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return None
     except Exception as e:
         print(f"Error: {str(e)}")
         return None
