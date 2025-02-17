@@ -1,9 +1,7 @@
-selenium>=4.0.0
-streamlit>=1.10.0
-pandas>=1.3.0
-beautifulsoup4>=4.9.0
-requests>=2.25.0
-webdriver_manager>=3.8.0
-plotly>=5.13.0
-colorama>=0.4.6
-tabulate>=0.9.0 
+streamlit
+selenium
+webdriver_manager
+pandas
+requests
+beautifulsoup4
+plotly 

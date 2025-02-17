@@ -4,6 +4,8 @@ import pandas as pd
 import coin_price_calculator as cpc
 import streamlit as st
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -194,7 +196,7 @@ class GoldETFAnalyzer:
     def get_market_data(self):
         """دریافت اطلاعات صندوق‌ها از tradersarena با استفاده از selenium"""
         try:
-            print("\nGetting market data from tradersarena...")  # Debug
+            print("\nGetting market data from tradersarena...")
             
             # تنظیمات Chrome
             chrome_options = Options()
@@ -203,69 +205,74 @@ class GoldETFAnalyzer:
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('--window-size=1920,1080')
+            chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             
-            driver = webdriver.Chrome(options=chrome_options)
-            driver.get('https://tradersarena.ir/industries/68f')
+            # استفاده از ChromeDriverManager
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
             
-            # صبر برای لود شدن جدول
-            wait = WebDriverWait(driver, 30)
-            table = wait.until(EC.presence_of_element_located((By.ID, 'industriesTable')))
-            time.sleep(5)  # صبر اضافه برای لود کامل داده‌ها
-            
-            # پیدا کردن tbody و ردیف‌ها
-            tbody = table.find_element(By.TAG_NAME, 'tbody')
-            rows = tbody.find_elements(By.CSS_SELECTOR, 'tr:not(#minrow):not(#maxrow)')
-            
-            if len(rows) <= 0:
-                raise Exception("No rows found in table")
+            try:
+                driver.get('https://tradersarena.ir/industries/68f')
                 
-            print(f"Found {len(rows)} rows")  # Debug
-            
-            etf_data = {}
-            
-            for row in rows:
-                try:
-                    # استفاده از CSS Selector برای پیدا کردن ستون‌ها
-                    symbol = row.find_element(By.CSS_SELECTOR, 'td:nth-child(1) a').text.strip()
-                    name = row.find_element(By.CSS_SELECTOR, 'td:nth-child(1) a').get_attribute('title') or symbol
-                    volume_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(2)').text.strip()
-                    price_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(7)').text.strip().replace(',', '')
-                    nav_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(9)').text.strip().replace(',', '')
-                    bubble_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(10)').text.strip().replace('%', '')
+                # صبر برای لود شدن جدول
+                wait = WebDriverWait(driver, 30)
+                table = wait.until(EC.presence_of_element_located((By.ID, 'industriesTable')))
+                time.sleep(5)  # صبر اضافه برای لود کامل داده‌ها
+                
+                # پیدا کردن tbody و ردیف‌ها
+                tbody = table.find_element(By.TAG_NAME, 'tbody')
+                rows = tbody.find_elements(By.CSS_SELECTOR, 'tr:not(#minrow):not(#maxrow)')
+                
+                if len(rows) <= 0:
+                    raise Exception("No rows found in table")
                     
-                    print(f"Processing row - Symbol: {symbol}, Volume: {volume_text}")  # Debug
-                    
-                    if symbol and symbol not in ['حداقل', 'حداکثر']:
-                        volume = self.convert_volume(volume_text)
+                print(f"Found {len(rows)} rows")  # Debug
+                
+                etf_data = {}
+                
+                for row in rows:
+                    try:
+                        # استفاده از CSS Selector برای پیدا کردن ستون‌ها
+                        symbol = row.find_element(By.CSS_SELECTOR, 'td:nth-child(1) a').text.strip()
+                        name = row.find_element(By.CSS_SELECTOR, 'td:nth-child(1) a').get_attribute('title') or symbol
+                        volume_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(2)').text.strip()
+                        price_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(7)').text.strip().replace(',', '')
+                        nav_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(9)').text.strip().replace(',', '')
+                        bubble_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(10)').text.strip().replace('%', '')
                         
-                        if nav_text and nav_text != '-' and price_text and price_text != '-':
-                            nav = float(nav_text)
-                            price = float(price_text)
-                            bubble = float(bubble_text) if bubble_text and bubble_text != '-' else 0
+                        print(f"Processing row - Symbol: {symbol}, Volume: {volume_text}")  # Debug
+                        
+                        if symbol and symbol not in ['حداقل', 'حداکثر']:
+                            volume = self.convert_volume(volume_text)
                             
-                            etf_data[symbol] = {
-                                'name': name,
-                                'price': price * 10,  # تبدیل به ریال
-                                'nav': nav * 10,
-                                'bubble': bubble,
-                                'volume': volume
-                            }
-                            print(f"Added data for {symbol}: Volume={volume:,}, Name={name}")  # Debug
-                            
-                except Exception as e:
-                    print(f"Error parsing row: {str(e)}")  # Debug
-                    continue
-            
-            if not etf_data:
-                raise Exception("No ETF data could be extracted")
+                            if nav_text and nav_text != '-' and price_text and price_text != '-':
+                                nav = float(nav_text)
+                                price = float(price_text)
+                                bubble = float(bubble_text) if bubble_text and bubble_text != '-' else 0
+                                
+                                etf_data[symbol] = {
+                                    'name': name,
+                                    'price': price * 10,  # تبدیل به ریال
+                                    'nav': nav * 10,
+                                    'bubble': bubble,
+                                    'volume': volume
+                                }
+                                print(f"Added data for {symbol}: Volume={volume:,}, Name={name}")  # Debug
+                                
+                    except Exception as e:
+                        print(f"Error parsing row: {str(e)}")  # Debug
+                        continue
                 
-            driver.quit()
+                if not etf_data:
+                    raise Exception("No ETF data could be extracted")
+                    
+            finally:
+                driver.quit()
+                
             return etf_data
             
         except Exception as e:
             print(f"Error getting market data: {str(e)}")
-            if 'driver' in locals():
-                driver.quit()
             return {}
 
     def calculate_gold_value(self, gold_prices):
