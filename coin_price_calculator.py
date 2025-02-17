@@ -191,6 +191,73 @@ def get_prices():
         print(f"Error: {str(e)}")
         return None
 
+def calculate_coin_nav(gold_18_price, coin_type='bahar'):
+    """محاسبه NAV سکه بر اساس قیمت طلای 18 عیار"""
+    # وزن سکه‌ها (گرم)
+    weights = {
+        'bahar': 8.133,    # سکه تمام
+        'half': 4.068,     # نیم سکه
+        'quarter': 2.034   # ربع سکه
+    }
+    
+    try:
+        if not gold_18_price or gold_18_price <= 0:
+            return 0
+            
+        # تبدیل طلای 18 به 24
+        gold_24_price = (gold_18_price * 24) / 18
+        
+        # محاسبه NAV بر اساس وزن سکه
+        weight = weights.get(coin_type, weights['bahar'])
+        nav = gold_24_price * weight
+        
+        # اضافه کردن اجرت ساخت (درصد متفاوت برای هر سکه)
+        premiums = {
+            'bahar': 9,      # 9 درصد برای سکه تمام
+            'half': 12,      # 12 درصد برای نیم سکه
+            'quarter': 15    # 15 درصد برای ربع سکه
+        }
+        
+        premium_percent = premiums.get(coin_type, premiums['bahar'])
+        nav = nav * (1 + premium_percent/100)
+        
+        return nav
+        
+    except Exception as e:
+        print(f"Error calculating coin NAV: {str(e)}")
+        return 0
+
+def calculate_bubble(coin_price, coin_weight, gold_gram_price, global_gold_price, usd_price):
+    """محاسبه حباب سکه به دو روش
+    
+    Args:
+        coin_price: قیمت سکه (تومان)
+        coin_weight: وزن سکه (گرم)
+        gold_gram_price: قیمت هر گرم طلای 18 عیار (تومان)
+        global_gold_price: قیمت انس جهانی (دلار)
+        usd_price: قیمت دلار (تومان)
+    
+    Returns:
+        (local_bubble, global_bubble): حباب نسبت به طلای داخلی و جهانی (درصد)
+    """
+    try:
+        # محاسبه حباب نسبت به قیمت طلای داخلی
+        gold_24_price = (gold_gram_price * 24) / 18  # تبدیل طلای 18 به 24
+        coin_gold_value = gold_24_price * coin_weight
+        local_bubble = ((coin_price - coin_gold_value) / coin_gold_value) * 100
+        
+        # محاسبه حباب نسبت به قیمت جهانی
+        GRAM_TO_OUNCE = 31.1035  # هر انس = 31.1035 گرم
+        global_gold_gram = (global_gold_price * usd_price) / GRAM_TO_OUNCE  # قیمت هر گرم طلای 24 عیار
+        coin_global_value = global_gold_gram * coin_weight
+        global_bubble = ((coin_price - coin_global_value) / coin_global_value) * 100
+        
+        return round(local_bubble, 1), round(global_bubble, 1)
+        
+    except Exception as e:
+        print(f"Error calculating bubble: {str(e)}")
+        return 0, 0
+
 if __name__ == "__main__":
     prices = get_prices()
     if prices:

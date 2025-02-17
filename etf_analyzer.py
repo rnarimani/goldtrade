@@ -342,43 +342,65 @@ class GoldETFAnalyzer:
         }
         
         # تولید توصیه‌ها
-        recommendations = []
-        
-        # محاسبه میانگین و انحراف معیار حباب‌ها
-        bubbles = [data['bubble'] for data in etf_data.values()]
-        avg_bubble = sum(bubbles) / len(bubbles)
-        std_bubble = (sum((x - avg_bubble) ** 2 for x in bubbles) / len(bubbles)) ** 0.5
-        
-        for symbol, data in etf_data.items():
-            bubble = data['bubble']
-            volume = data['volume']
-            avg_volume = sum(d['volume'] for d in etf_data.values()) / len(etf_data)
-            
-            # توصیه‌های خرید
-            if bubble < avg_bubble - std_bubble:  # حباب کمتر از یک انحراف معیار زیر میانگین
-                if volume > avg_volume:  # حجم معاملات بالا
-                    recommendations.append(f"توصیه قوی به خرید {symbol} با {bubble:.1f}% زیر میانگین بازار و حجم معاملات بالا")
-                else:
-                    recommendations.append(f"توصیه به خرید {symbol} با {bubble:.1f}% زیر میانگین بازار")
-            
-            # هشدارهای فروش
-            elif bubble > avg_bubble + std_bubble:  # حباب بیشتر از یک انحراف معیار بالای میانگین
-                if volume > avg_volume:  # حجم معاملات بالا
-                    recommendations.append(f"هشدار جدی برای {symbol} با {bubble:.1f}% بالای میانگین بازار و حجم معاملات بالا")
-                else:
-                    recommendations.append(f"هشدار برای {symbol} با {bubble:.1f}% بالای میانگین بازار")
-            
-            # وضعیت‌های خاص
-            if volume < avg_volume * 0.2:  # حجم معاملات خیلی پایین
-                recommendations.append(f"احتیاط در معامله {symbol} به دلیل حجم معاملات بسیار پایین")
+        recommendations = self.get_recommendations(etf_data)
         
         analysis['recommendations'] = recommendations
         analysis['market_stats'] = {
-            'avg_bubble': avg_bubble,
-            'std_bubble': std_bubble,
-            'avg_volume': sum(d['volume'] for d in etf_data.values()) / len(etf_data)
+            'avg_bubble': sum(data['bubble'] for data in etf_data.values()) / len(etf_data),
+            'std_bubble': (sum((data['bubble'] - sum(data['bubble'] for data in etf_data.values()) / len(etf_data)) ** 2 for data in etf_data.values()) / len(etf_data)) ** 0.5,
+            'avg_volume': sum(data['volume'] for data in etf_data.values()) / len(etf_data)
         }
         return analysis
+
+    def get_recommendations(self, funds_data):
+        """Generate investment recommendations based on analysis"""
+        recommendations = []
+        
+        # Find funds with low bubble
+        low_bubble_funds = [
+            (symbol, data) for symbol, data in funds_data.items() 
+            if data['bubble'] < 2
+        ]
+        if low_bubble_funds:
+            symbols = ', '.join(symbol for symbol, _ in low_bubble_funds)
+            recommendations.append(
+                f"{symbols} have minimal bubble (<2%). Good options for investment."
+            )
+        
+        # Find funds with high volume
+        high_volume_funds = [
+            (symbol, data) for symbol, data in funds_data.items()
+            if data['volume'] > 1000000
+        ]
+        if high_volume_funds:
+            symbols = ', '.join(symbol for symbol, _ in high_volume_funds)
+            recommendations.append(
+                f"{symbols} have high trading volume. Better liquidity for large trades."
+            )
+        
+        # Warning for high bubble funds
+        high_bubble_funds = [
+            (symbol, data) for symbol, data in funds_data.items()
+            if data['bubble'] > 5
+        ]
+        if high_bubble_funds:
+            symbols = ', '.join(symbol for symbol, _ in high_bubble_funds)
+            recommendations.append(
+                f"Caution: {symbols} have high bubble (>5%). Consider waiting for better prices."
+            )
+        
+        # Warning for low volume funds
+        low_volume_funds = [
+            (symbol, data) for symbol, data in funds_data.items()
+            if data['volume'] < 100000
+        ]
+        if low_volume_funds:
+            symbols = ', '.join(symbol for symbol, _ in low_volume_funds)
+            recommendations.append(
+                f"Note: {symbols} have low trading volume. May be difficult to trade large amounts."
+            )
+        
+        return recommendations
 
     def print_analysis(self):
         """Print formatted analysis"""

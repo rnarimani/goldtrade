@@ -42,6 +42,35 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.header("Gold Market Prices")
     if prices:
+        # Main metrics
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        
+        with metric_col1:
+            st.metric(
+                "USD/IRR",
+                f"{prices['usd']:,} Tomans",
+                delta=None,
+                help="Current USD to Iranian Rial exchange rate"
+            )
+        
+        with metric_col2:
+            st.metric(
+                "18k Gold",
+                f"{prices['gold_per_gram']:,} Tomans/g",
+                delta=f"{prices['gold_price_difference']:+.1f}%",
+                help="Price per gram of 18k gold and its difference from global price"
+            )
+        
+        with metric_col3:
+            st.metric(
+                "Global Gold",
+                f"${prices['global_gold']:,.2f}/oz",
+                delta=None,
+                help="Global gold price per ounce"
+            )
+        
+        st.markdown("---")  # خط جداکننده
+        
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -104,10 +133,57 @@ with tab2:
                 )
         
         with col2:
-            st.subheader("Recommendations")
+            st.subheader("Investment Recommendations")
             if analysis.get('recommendations'):
+                # تبدیل توصیه‌ها به دیتافریم
+                rec_data = []
                 for rec in analysis['recommendations']:
-                    st.info(rec)
+                    # تعیین نوع توصیه و آیکون
+                    if "Good options" in rec:
+                        rec_type = "✅ Strong Buy"
+                        background = "background-color: #c6efce"
+                    elif "high trading volume" in rec:
+                        rec_type = "📈 High Liquidity"
+                        background = "background-color: #bdd7ee"
+                    elif "Caution" in rec:
+                        rec_type = "⚠️ Warning"
+                        background = "background-color: #ffc7ce"
+                    elif "Note" in rec:
+                        rec_type = "ℹ️ Info"
+                        background = "background-color: #fff2cc"
+                    else:
+                        rec_type = "💡 Other"
+                        background = "background-color: #f2f2f2"
+                    
+                    # جدا کردن نماد و پیام
+                    symbols, message = rec.split(" have ", 1)
+                    
+                    rec_data.append({
+                        'Signal': rec_type,
+                        'Symbols': symbols,
+                        'Details': f"have {message}",
+                        'style': background
+                    })
+                
+                # تبدیل به دیتافریم
+                df = pd.DataFrame(rec_data)
+                
+                # ایجاد استایلر
+                def make_pretty(styler):
+                    styler.set_properties(**{
+                        'padding': '10px',
+                        'border-radius': '5px',
+                        'margin-bottom': '10px'
+                    })
+                    for idx, row in df.iterrows():
+                        styler.set_properties(**{
+                            'background-color': row['style'].split(': ')[1]
+                        }, subset=pd.IndexSlice[idx, :])
+                    return styler
+                
+                # نمایش دیتافریم با استایل
+                styled_df = df.drop('style', axis=1).style.pipe(make_pretty)
+                st.dataframe(styled_df, use_container_width=True, height=200)
     else:
         st.error("Error getting ETF data")
 
@@ -168,6 +244,144 @@ with tab3:
                 yaxis_title="Bubble (%)",
                 height=500,
                 showlegend=False
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Non-ETF Instruments Comparison
+        st.subheader("Coins and Digital Gold Comparison")
+        
+        # تعریف رنگ‌ها
+        colors = {
+            'Coin': '#d62728',    # قرمز
+            'Digital': '#2ca02c'   # سبز
+        }
+        
+        # جمع‌آوری داده‌های سکه و ارزهای دیجیتال
+        other_instruments = []
+        
+        if prices:
+            # سکه بهار آزادی
+            if 'full_coin' in prices:
+                local_bubble, global_bubble = cpc.calculate_bubble(
+                    coin_price=prices['full_coin'],
+                    coin_weight=8.133,
+                    gold_gram_price=prices['gold_per_gram'],
+                    global_gold_price=prices['global_gold'],
+                    usd_price=prices['usd']
+                )
+                other_instruments.append({
+                    'name': 'Full Coin',
+                    'price': prices['full_coin'],
+                    'local_bubble': local_bubble,
+                    'global_bubble': global_bubble,
+                    'type': 'Coin'
+                })
+            
+            # نیم سکه
+            if 'half_coin' in prices:
+                local_bubble, global_bubble = cpc.calculate_bubble(
+                    coin_price=prices['half_coin'],
+                    coin_weight=4.068,
+                    gold_gram_price=prices['gold_per_gram'],
+                    global_gold_price=prices['global_gold'],
+                    usd_price=prices['usd']
+                )
+                other_instruments.append({
+                    'name': 'Half Coin',
+                    'price': prices['half_coin'],
+                    'local_bubble': local_bubble,
+                    'global_bubble': global_bubble,
+                    'type': 'Coin'
+                })
+            
+            # ربع سکه
+            if 'quarter_coin' in prices:
+                local_bubble, global_bubble = cpc.calculate_bubble(
+                    coin_price=prices['quarter_coin'],
+                    coin_weight=2.034,
+                    gold_gram_price=prices['gold_per_gram'],
+                    global_gold_price=prices['global_gold'],
+                    usd_price=prices['usd']
+                )
+                other_instruments.append({
+                    'name': 'Quarter Coin',
+                    'price': prices['quarter_coin'],
+                    'local_bubble': local_bubble,
+                    'global_bubble': global_bubble,
+                    'type': 'Coin'
+                })
+            
+            # پکس گلد و تتر گلد نسبت به قیمت جهانی
+            if 'paxg' in prices and prices['paxg'] > 0:
+                bubble = ((prices['paxg'] - prices['global_gold']) / prices['global_gold']) * 100
+                other_instruments.append({
+                    'name': 'PAXG',
+                    'price': prices['paxg'] * prices['usd'],
+                    'local_bubble': round(bubble, 1),
+                    'global_bubble': round(bubble, 1),
+                    'type': 'Digital'
+                })
+            
+            if 'xaut' in prices and prices['xaut'] > 0:
+                bubble = ((prices['xaut'] - prices['global_gold']) / prices['global_gold']) * 100
+                other_instruments.append({
+                    'name': 'XAUT',
+                    'price': prices['xaut'] * prices['usd'],
+                    'local_bubble': round(bubble, 1),
+                    'global_bubble': round(bubble, 1),
+                    'type': 'Digital'
+                })
+        
+        # رسم دو نمودار میله‌ای جداگانه
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=[item['name'] for item in other_instruments],
+                y=[item['local_bubble'] for item in other_instruments],
+                text=[f"{item['local_bubble']:+.1f}%" for item in other_instruments],
+                textposition='auto',
+                marker_color=[colors[item['type']] for item in other_instruments],
+                name='Local Bubble'
+            ))
+            
+            fig.update_layout(
+                title="Bubble vs Local Gold Price",
+                xaxis_title="Instrument",
+                yaxis_title="Bubble (%)",
+                height=400,
+                showlegend=False,
+                bargap=0.3,
+                yaxis=dict(
+                    tickformat='+.1f',
+                    ticksuffix='%'
+                )
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=[item['name'] for item in other_instruments],
+                y=[item['global_bubble'] for item in other_instruments],
+                text=[f"{item['global_bubble']:+.1f}%" for item in other_instruments],
+                textposition='auto',
+                marker_color=[colors[item['type']] for item in other_instruments],
+                name='Global Bubble'
+            ))
+            
+            fig.update_layout(
+                title="Bubble vs Global Gold Price",
+                xaxis_title="Instrument",
+                yaxis_title="Bubble (%)",
+                height=400,
+                showlegend=False,
+                bargap=0.3,
+                yaxis=dict(
+                    tickformat='+.1f',
+                    ticksuffix='%'
+                )
             )
             st.plotly_chart(fig, use_container_width=True)
     else:
