@@ -203,20 +203,25 @@ class GoldETFAnalyzer:
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--disable-software-rasterizer')
+            chrome_options.add_argument('--disable-extensions')
+            chrome_options.add_argument('--single-process')
+            chrome_options.add_argument('--ignore-certificate-errors')
             chrome_options.add_argument('--window-size=1920,1080')
             chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             
-            # استفاده از ChromeDriverManager
+            # استفاده از ChromeDriverManager بدون تعیین نسخه
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
             
             try:
+                driver.set_page_load_timeout(180)  # افزایش timeout به 3 دقیقه
                 driver.get('https://tradersarena.ir/industries/68f')
                 
                 # صبر برای لود شدن جدول
-                wait = WebDriverWait(driver, 30)
+                wait = WebDriverWait(driver, 60)  # افزایش به 60 ثانیه
                 table = wait.until(EC.presence_of_element_located((By.ID, 'industriesTable')))
-                time.sleep(5)  # صبر اضافه برای لود کامل داده‌ها
+                time.sleep(10)  # افزایش به 10 ثانیه
                 
                 # پیدا کردن tbody و ردیف‌ها
                 tbody = table.find_element(By.TAG_NAME, 'tbody')
