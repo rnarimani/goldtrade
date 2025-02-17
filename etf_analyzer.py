@@ -95,21 +95,20 @@ class GoldETFAnalyzer:
             chrome_options.add_argument('--window-size=1920,1080')
             chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             
-            # اگر روی استریم‌لیت هستیم
-            if 'STREAMLIT_SHARING' in os.environ:
-                chrome_options.binary_location = "/usr/bin/chromium-browser"
-            
-            driver = webdriver.Chrome(options=chrome_options)
+            # استفاده از ChromeDriverManager با تنظیمات بیشتر
+            service = Service(ChromeDriverManager(version="stable").install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
             
             try:
+                driver.set_page_load_timeout(180)  # افزایش timeout به 3 دقیقه
                 driver.get('https://tradersarena.ir/industries/68f')
                 
                 # افزایش زمان انتظار
-                wait = WebDriverWait(driver, 30)
+                wait = WebDriverWait(driver, 60)  # افزایش به 60 ثانیه
                 table = wait.until(EC.presence_of_element_located((By.ID, 'navTable')))
                 
                 # صبر اضافه برای لود شدن داده‌ها
-                time.sleep(5)
+                time.sleep(10)  # افزایش به 10 ثانیه
                 
                 # پیدا کردن ردیف‌های جدول
                 rows = table.find_elements(By.TAG_NAME, 'tr')
