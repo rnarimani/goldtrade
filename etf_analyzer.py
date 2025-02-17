@@ -3,13 +3,9 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import coin_price_calculator as cpc
 import streamlit as st
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 import time
 import os
+from . import chrome_config
 
 
 class GoldETFAnalyzer:
@@ -76,28 +72,14 @@ class GoldETFAnalyzer:
         self.get_all_gold_etfs()
     
     def get_all_gold_etfs(self):
-        """دریافت لیست همه صندوق‌های طلا از tradersarena با استفاده از selenium"""
+        """دریافت لیست همه صندوق‌های طلا از tradersarena"""
         try:
             print("Getting ETF list from tradersarena...")
             
-            # تنظیمات Chrome برای استریم‌لیت
-            chrome_options = Options()
-            chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--disable-software-rasterizer')
-            chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--single-process')
-            chrome_options.add_argument('--ignore-certificate-errors')
-            chrome_options.add_argument('--window-size=1920,1080')
-            chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
-            
-            # استفاده از selenium-manager
-            driver = webdriver.Chrome(options=chrome_options)
+            # استفاده از تنظیمات مشترک Chrome
+            driver = chrome_config.get_chrome_driver()
             
             try:
-                driver.set_page_load_timeout(180)  # افزایش timeout به 3 دقیقه
                 driver.get('https://tradersarena.ir/industries/68f')
                 
                 # افزایش زمان انتظار

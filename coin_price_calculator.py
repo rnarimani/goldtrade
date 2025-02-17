@@ -10,6 +10,7 @@ import colorama
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
 import os
+from . import chrome_config
 
 colorama.init()
 
@@ -44,22 +45,8 @@ def get_crypto_gold_prices():
 def get_prices():
     """دریافت قیمت‌های طلا از coingecko"""
     try:
-        # تنظیمات Chrome
-        chrome_options = Options()
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--disable-software-rasterizer')
-        chrome_options.add_argument('--disable-extensions')
-        chrome_options.add_argument('--single-process')
-        chrome_options.add_argument('--ignore-certificate-errors')
-        chrome_options.add_argument('--window-size=1920,1080')
-        chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
-        chrome_options.binary_location = "/usr/bin/chromium"
-        
-        # استفاده از selenium-manager
-        driver = webdriver.Chrome(options=chrome_options)
+        # استفاده از تنظیمات مشترک Chrome
+        driver = chrome_config.get_chrome_driver()
         
         try:
             driver.set_page_load_timeout(180)
