@@ -16,9 +16,8 @@ colorama.init()
 
 def get_crypto_gold_prices():
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+        # استفاده از headers مشترک
+        headers = chrome_config.get_headers()
         
         # Get PAXG price from Mexc
         paxg_response = requests.get('https://www.mexc.com/open/api/v2/market/ticker?symbol=PAXG_USDT', headers=headers)

@@ -291,9 +291,8 @@ class GoldETFAnalyzer:
     @st.cache_data(ttl=300)
     def get_market_price(self, symbol):
         try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+            # استفاده از headers مشترک
+            headers = chrome_config.get_headers()
             
             url = f"http://cdn.tsetmc.com/api/Instrument/GetInstrumentPriceData/{symbol}"
             response = requests.get(url, headers=headers)
@@ -312,9 +311,8 @@ class GoldETFAnalyzer:
     @st.cache_data(ttl=300)
     def get_trading_volume(self, symbol):
         try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+            # استفاده از headers مشترک
+            headers = chrome_config.get_headers()
             
             url = f"http://cdn.tsetmc.com/api/Instrument/GetInstrumentPriceData/{symbol}"
             response = requests.get(url, headers=headers)
