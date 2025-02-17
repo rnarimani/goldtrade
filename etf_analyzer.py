@@ -180,25 +180,11 @@ class GoldETFAnalyzer:
         try:
             print("\nGetting market data from tradersarena...")
             
-            # تنظیمات Chrome
-            chrome_options = Options()
-            chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--disable-software-rasterizer')
-            chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--single-process')
-            chrome_options.add_argument('--ignore-certificate-errors')
-            chrome_options.add_argument('--window-size=1920,1080')
-            chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
-            chrome_options.binary_location = "/usr/bin/chromium"
-            
-            # استفاده از selenium-manager
-            driver = webdriver.Chrome(options=chrome_options)
+            # استفاده از تنظیمات مشترک Chrome و headers
+            driver = chrome_config.get_chrome_driver()
+            headers = chrome_config.get_headers()
             
             try:
-                driver.set_page_load_timeout(180)
                 driver.get('https://tradersarena.ir/industries/68f')
                 
                 # صبر برای لود شدن جدول
