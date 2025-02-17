@@ -91,51 +91,54 @@ class GoldETFAnalyzer:
             chrome_options.add_argument('--single-process')
             chrome_options.add_argument('--ignore-certificate-errors')
             chrome_options.add_argument('--window-size=1920,1080')
+            chrome_options.add_argument(f'--user-data-dir=/tmp/chrome-data-{os.getpid()}')
             
             # اگر روی استریم‌لیت هستیم
             if 'STREAMLIT_SHARING' in os.environ:
                 chrome_options.binary_location = "/usr/bin/chromium-browser"
             
             driver = webdriver.Chrome(options=chrome_options)
-            driver.get('https://tradersarena.ir/industries/68f')
             
-            # افزایش زمان انتظار
-            wait = WebDriverWait(driver, 30)
-            table = wait.until(EC.presence_of_element_located((By.ID, 'navTable')))
-            
-            # صبر اضافه برای لود شدن داده‌ها
-            time.sleep(5)
-            
-            # پیدا کردن ردیف‌های جدول
-            rows = table.find_elements(By.TAG_NAME, 'tr')
-            print(f"Found {len(rows)} rows")
-            
-            for row in rows[1:]:
-                try:
-                    cols = row.find_elements(By.TAG_NAME, 'td')
-                    if len(cols) >= 6:
-                        symbol_element = cols[0].find_element(By.TAG_NAME, 'a')
-                        symbol = symbol_element.text.strip()
-                        
-                        if symbol and symbol not in ['حداقل', 'حداکثر']:
-                            self.gold_etfs[symbol] = {
-                                'name': symbol_element.get_attribute('href').split('/')[-1],
-                                'gold_weight': 0.01,
-                                'gold_purity': 1.000
-                            }
-                            print(f"Added ETF: {symbol}")
+            try:
+                driver.get('https://tradersarena.ir/industries/68f')
+                
+                # افزایش زمان انتظار
+                wait = WebDriverWait(driver, 30)
+                table = wait.until(EC.presence_of_element_located((By.ID, 'navTable')))
+                
+                # صبر اضافه برای لود شدن داده‌ها
+                time.sleep(5)
+                
+                # پیدا کردن ردیف‌های جدول
+                rows = table.find_elements(By.TAG_NAME, 'tr')
+                print(f"Found {len(rows)} rows")
+                
+                for row in rows[1:]:
+                    try:
+                        cols = row.find_elements(By.TAG_NAME, 'td')
+                        if len(cols) >= 6:
+                            symbol_element = cols[0].find_element(By.TAG_NAME, 'a')
+                            symbol = symbol_element.text.strip()
                             
-                except Exception as e:
-                    print(f"Error parsing row: {str(e)}")
-                    continue
-            
-            driver.quit()
+                            if symbol and symbol not in ['حداقل', 'حداکثر']:
+                                self.gold_etfs[symbol] = {
+                                    'name': symbol_element.get_attribute('href').split('/')[-1],
+                                    'gold_weight': 0.01,
+                                    'gold_purity': 1.000
+                                }
+                                print(f"Added ETF: {symbol}")
+                                
+                    except Exception as e:
+                        print(f"Error parsing row: {str(e)}")
+                        continue
+                
+            finally:
+                driver.quit()
+                
             print(f"Total gold ETFs found: {len(self.gold_etfs)}")
             
         except Exception as e:
             print(f"Error getting ETF list: {str(e)}")
-            if 'driver' in locals():
-                driver.quit()
             # اگر خطا رخ داد، از لیست پیش‌فرض استفاده کنیم
             self.gold_etfs = self.gold_etf_info
     
