@@ -1,4 +1,11 @@
 import streamlit as st
+import sys
+from pathlib import Path
+
+# اضافه کردن مسیر فعلی به PYTHONPATH
+current_dir = Path(__file__).parent
+sys.path.append(str(current_dir))
+
 import coin_price_calculator as cpc
 import etf_analyzer as etf
 import plotly.graph_objects as go
