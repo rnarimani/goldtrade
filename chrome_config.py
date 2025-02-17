@@ -19,6 +19,12 @@ def get_chrome_driver():
     
     # استفاده از selenium-manager
     driver = webdriver.Chrome(options=chrome_options)
-    driver.set_page_load_timeout(180)
+    driver.set_page_load_timeout(300)  # افزایش timeout به 5 دقیقه
     
-    return driver 
+    return driver
+
+def get_headers():
+    """تنظیمات مشترک headers برای درخواست‌ها"""
+    return {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    } 
