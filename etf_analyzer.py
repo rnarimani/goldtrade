@@ -89,8 +89,6 @@ class GoldETFAnalyzer:
                 # افزایش زمان انتظار
                 wait = WebDriverWait(driver, 60)  # افزایش به 60 ثانیه
                 table = wait.until(EC.presence_of_element_located((By.ID, 'navTable')))
-                
-                # صبر اضافه برای لود شدن داده‌ها
                 time.sleep(10)  # افزایش به 10 ثانیه
                 
                 # پیدا کردن ردیف‌های جدول
@@ -137,27 +135,34 @@ class GoldETFAnalyzer:
             # حذف همه فاصله‌ها و کاماها
             volume_text = volume_text.replace(',', '').replace(' ', '')
             
+            # تبدیل B به میلیارد
+            if 'B' in volume_text:
+                number = float(volume_text.replace('B', ''))
+                result = int(number * 1000000000)
+                print(f"Converted B: {volume_text} -> {result}")
+                return result
+                
             # تبدیل K به هزار
             if 'K' in volume_text:
                 number = float(volume_text.replace('K', ''))
                 result = int(number * 1000)
-                print(f"Converted K: {volume_text} -> {result}")  # Debug
+                print(f"Converted K: {volume_text} -> {result}")
                 return result
                 
             # تبدیل M به میلیون
             if 'M' in volume_text:
                 number = float(volume_text.replace('M', ''))
                 result = int(number * 1000000)
-                print(f"Converted M: {volume_text} -> {result}")  # Debug
+                print(f"Converted M: {volume_text} -> {result}")
                 return result
                 
             # اگر عدد ساده باشد
             result = int(float(volume_text))
-            print(f"Converted plain: {volume_text} -> {result}")  # Debug
+            print(f"Converted plain: {volume_text} -> {result}")
             return result
             
         except (ValueError, TypeError) as e:
-            print(f"Error converting volume '{volume_text}': {str(e)}")  # Debug
+            print(f"Error converting volume '{volume_text}': {str(e)}")
             return 0
 
     def test_volume_conversion(self):
@@ -175,65 +180,116 @@ class GoldETFAnalyzer:
             result = self.convert_volume(test)
             print(f"Input: {test} -> Output: {result:,}")
             
+    def clean_number(self, text):
+        """تمیز کردن متن عددی از کاما، فاصله و پسوندها"""
+        if not text or text == '-':
+            return None
+            
+        # حذف کاما و فاصله
+        text = text.replace(',', '').replace(' ', '').strip()
+        
+        try:
+            # حذف پسوندها
+            for suffix in ['B', 'M', 'K']:
+                if suffix in text:
+                    number = float(text.replace(suffix, ''))
+                    if suffix == 'B':
+                        return str(number * 1000000000)
+                    elif suffix == 'M':
+                        return str(number * 1000000)
+                    elif suffix == 'K':
+                        return str(number * 1000)
+            
+            return text
+            
+        except Exception as e:
+            print(f"Error cleaning number '{text}': {str(e)}")
+            return None
+        
     def get_market_data(self):
         """دریافت اطلاعات صندوق‌ها از tradersarena با استفاده از selenium"""
         try:
             print("\nGetting market data from tradersarena...")
             
-            # استفاده از تنظیمات مشترک Chrome و headers
             driver = chrome_config.get_chrome_driver()
-            headers = chrome_config.get_headers()
             
             try:
                 driver.get('https://tradersarena.ir/industries/68f')
                 
                 # صبر برای لود شدن جدول
-                wait = WebDriverWait(driver, 60)  # افزایش به 60 ثانیه
-                table = wait.until(EC.presence_of_element_located((By.ID, 'industriesTable')))
-                time.sleep(10)  # افزایش به 10 ثانیه
+                wait = WebDriverWait(driver, 60)
                 
-                # پیدا کردن tbody و ردیف‌ها
-                tbody = table.find_element(By.TAG_NAME, 'tbody')
-                rows = tbody.find_elements(By.CSS_SELECTOR, 'tr:not(#minrow):not(#maxrow)')
+                # صبر برای لود شدن کل صفحه
+                wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+                time.sleep(3)
+                
+                # صبر برای لود شدن جدول
+                table = wait.until(EC.presence_of_element_located((By.ID, 'industriesTable')))
+                time.sleep(3)
+                
+                # صبر برای لود شدن محتوای جدول
+                wait.until(EC.presence_of_element_located((By.XPATH, "//table[@id='industriesTable']//tbody//tr[1]//td[1]//a")))
+                time.sleep(3)
+                
+                # پیدا کردن ردیف‌ها
+                rows = table.find_elements(By.XPATH, ".//tbody//tr[not(@id='minrow') and not(@id='maxrow')]")
                 
                 if len(rows) <= 0:
                     raise Exception("No rows found in table")
                     
-                print(f"Found {len(rows)} rows")  # Debug
+                print(f"Found {len(rows)} rows")
                 
                 etf_data = {}
                 
                 for row in rows:
                     try:
-                        # استفاده از CSS Selector برای پیدا کردن ستون‌ها
-                        symbol = row.find_element(By.CSS_SELECTOR, 'td:nth-child(1) a').text.strip()
-                        name = row.find_element(By.CSS_SELECTOR, 'td:nth-child(1) a').get_attribute('title') or symbol
-                        volume_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(2)').text.strip()
-                        price_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(7)').text.strip().replace(',', '')
-                        nav_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(9)').text.strip().replace(',', '')
-                        bubble_text = row.find_element(By.CSS_SELECTOR, 'td:nth-child(10)').text.strip().replace('%', '')
+                        # صبر برای لود شدن هر ردیف
+                        wait.until(EC.presence_of_element_located((By.TAG_NAME, 'td')))
+                        cells = row.find_elements(By.TAG_NAME, 'td')
                         
-                        print(f"Processing row - Symbol: {symbol}, Volume: {volume_text}")  # Debug
+                        if len(cells) < 10 or not cells[0].find_elements(By.TAG_NAME, 'a'):
+                            continue
+                            
+                        symbol = cells[0].find_element(By.TAG_NAME, 'a').text.strip()
+                        name = cells[0].find_element(By.TAG_NAME, 'a').get_attribute('title') or symbol
+                        volume_text = cells[1].text.strip()
+                        price_text = cells[3].text.strip()  # قیمت آخرین معامله
+                        nav_text = cells[4].text.strip()  # NAV
+                        bubble_text = cells[5].text.strip().replace('%', '')  # حباب
+                        
+                        print(f"Processing row - Symbol: {symbol}, Volume: {volume_text}, Price: {price_text}, NAV: {nav_text}")
                         
                         if symbol and symbol not in ['حداقل', 'حداکثر']:
                             volume = self.convert_volume(volume_text)
                             
-                            if nav_text and nav_text != '-' and price_text and price_text != '-':
-                                nav = float(nav_text)
-                                price = float(price_text)
-                                bubble = float(bubble_text) if bubble_text and bubble_text != '-' else 0
-                                
-                                etf_data[symbol] = {
-                                    'name': name,
-                                    'price': price * 10,  # تبدیل به ریال
-                                    'nav': nav * 10,
-                                    'bubble': bubble,
-                                    'volume': volume
-                                }
-                                print(f"Added data for {symbol}: Volume={volume:,}, Name={name}")  # Debug
+                            # تمیز کردن اعداد
+                            price_text = self.clean_number(price_text)
+                            nav_text = self.clean_number(nav_text)
+                            
+                            if nav_text and price_text:
+                                try:
+                                    price = float(price_text)
+                                    nav = float(nav_text)
+                                    bubble = float(bubble_text) if bubble_text and bubble_text != '-' else 0
+                                    
+                                    if nav > 0 and price > 0:  # اطمینان از معتبر بودن اعداد
+                                        etf_data[symbol] = {
+                                            'name': name,
+                                            'price': price * 10,
+                                            'nav': nav * 10,
+                                            'bubble': bubble,
+                                            'volume': volume
+                                        }
+                                        print(f"Added data for {symbol}: Price={price:,}, NAV={nav:,}, Volume={volume:,}")
+                                    else:
+                                        print(f"Invalid numbers for {symbol}: Price={price}, NAV={nav}")
+                                    
+                                except ValueError as e:
+                                    print(f"Error converting numbers for {symbol}: {str(e)}, Raw Price: '{price_text}', Raw NAV: '{nav_text}'")
+                                    continue
                                 
                     except Exception as e:
-                        print(f"Error parsing row: {str(e)}")  # Debug
+                        print(f"Error parsing row: {str(e)}")
                         continue
                 
                 if not etf_data:
